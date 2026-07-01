@@ -11,7 +11,7 @@ type Server struct {
 	route   http.Handler
 }
 
-func New(cfg *config.EnvData) *Server {	
+func New(cfg config.EnvData) *Server {	
 	ser := &Server {
 		address: cfg.Port,
 		route: loadRoute(),
