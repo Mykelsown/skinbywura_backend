@@ -3,15 +3,15 @@ package config
 import "os"
 
 type EnvData struct{
-	port string
+	Port string
 	DB string
-	sessionSecret string
+	SessionSecret string
 }
 
 func Load() EnvData {
 	 return EnvData{
-		port: os.Getenv("PORT"),
+		Port: os.Getenv("PORT"),
 		DB: os.Getenv("DATABASE_URL"),
-		sessionSecret: os.Getenv("SESSON_SECRET"),
+		SessionSecret: os.Getenv("SESSION_SECRET"),
 	 }
 }
