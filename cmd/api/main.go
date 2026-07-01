@@ -9,7 +9,8 @@ import (
 )
 
 func main() {
-	serve := server.New(config.Load())
+	fmt.Println(config.Load())
+	serve := server.New(&config.Load())
 	fmt.Println("server is running on port 8080")
 	err := serve.Run()
 	if err != nil {

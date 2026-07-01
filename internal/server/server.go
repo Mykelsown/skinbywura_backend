@@ -11,7 +11,7 @@ type Server struct {
 	route   http.Handler
 }
 
-func New(cfg config.EnvData) *Server {	
+func New(cfg *config.EnvData) *Server {	
 	ser := &Server {
 		address: cfg.Port,
 		route: loadRoute(),
@@ -21,5 +21,7 @@ func New(cfg config.EnvData) *Server {
 }
 
 func (s *Server) Run() error {
-	return http.ListenAndServe(":"+s.address, s.route)
+	// fmt.Println("binding to: ", s.address)
+	err :=http.ListenAndServe(":"+s.address, s.route)
+	return err
 }
