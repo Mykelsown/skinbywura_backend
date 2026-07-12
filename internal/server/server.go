@@ -21,7 +21,6 @@ func New(cfg config.EnvData) *Server {
 }
 
 func (s *Server) Run() error {
-	// fmt.Println("binding to: ", s.address)
 	err :=http.ListenAndServe(":"+s.address, s.route)
 	return err
 }

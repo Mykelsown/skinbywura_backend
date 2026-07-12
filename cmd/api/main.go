@@ -16,9 +16,9 @@ func main() {
 	}
 
 	serve := server.New(config.Load())
-	fmt.Println("server is running on port "+ config.Load().Port)
 	err  = serve.Run()
 	if err != nil {
 		log.Fatal("failed to run server on port " + config.Load().Port)
 	}
+	fmt.Println("server is running on port "+ config.Load().Port)
 }
