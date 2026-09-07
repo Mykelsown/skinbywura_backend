@@ -1,3 +1,4 @@
+// Package server contains the route registration and HTTP handlers for the API.
 package server
 
 import (
@@ -5,22 +6,24 @@ import (
 	"net/http"
 )
 
+// stats is the JSON payload returned by the health check endpoint.
 type stats struct {
 	Status string `json:"status"`
 }
 
+// loadRoute registers all API endpoints and returns the mux that serves them.
 func loadRoute() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(200)
-		
-		state := stats{"ok"}
+		w.WriteHeader(http.StatusOK)
+
+		state := stats{Status: "ok"}
 
 		err := json.NewEncoder(w).Encode(state)
 		if err != nil {
-			http.Error(w, "wasn't able to write", 400)
-			return 
+			http.Error(w, "wasn't able to write", http.StatusBadRequest)
+			return
 		}
 	})
 	return mux
