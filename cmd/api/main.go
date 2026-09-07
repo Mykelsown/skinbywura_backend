@@ -14,7 +14,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load .env file content: %v", err)
 	}
-
+go 
 	serve := server.New(config.Load())
 	err  = serve.Run()
 	if err != nil {
