@@ -15,7 +15,7 @@ type EnvData struct {
 func Load() EnvData {
 	return EnvData{
 		Port:          os.Getenv("PORT"),
-		DB:            os.Getenv("DATABASE_URL"),
+		DB:   	         os.Getenv("DATABASE_URL"),
 		SessionSecret: os.Getenv("SESSION_SECRET"),
 	}
 }

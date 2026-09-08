@@ -4,11 +4,11 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/Mykelsown/skinbywura_backend.git/config"
 	"github.com/Mykelsown/skinbywura_backend.git/internal/server"
+	"github.com/Mykelsown/skinbywura_backend.git/internal/store"
 	"github.com/joho/godotenv"
 )
 
@@ -19,11 +19,16 @@ func main() {
 		log.Fatalf("failed to load .env file content: %v", err)
 	}
 
-	serve := server.New(config.Load())
-	err = serve.Run()
-	fmt.Println("we")
+	cfg := config.Load()
+	dbStore, err := store.Connection(cfg.DB)
 	if err != nil {
-		log.Fatal("failed to run server on port " + config.Load().Port)
+		log.Fatalf("failed to connect to database: %v", err)
 	}
-	fmt.Println("server is running on port " + config.Load().Port)
+	defer dbStore.Pool.Close()
+
+	serve := server.New(cfg)
+	err = serve.Run()
+	if err != nil {
+		log.Fatalf("failed to run server on port %s: %v", cfg.Port, err)
+	}
 }
