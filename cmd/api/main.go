@@ -39,7 +39,7 @@ func main() {
 
 	// Build the HTTP server and block while it handles incoming requests.
 	serve := server.New(cfg)
-	log.Println("listening on port " + cfg.Port)
+	log.Println("listening on port :" + cfg.Port)
 	err = serve.Run()
 	if err != nil {
 		log.Fatalf("failed to run server on port %s: %v", cfg.Port, err)
