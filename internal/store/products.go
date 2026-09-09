@@ -2,8 +2,10 @@ package store
 
 import (
 	"context"
+	"errors"
 
 	"github.com/Mykelsown/skinbywura_backend.git/internal/types"
+	"github.com/jackc/pgx/v5"
 )
 
 // ListProducts returns every product in the database in a stable order. it essentaially connects the DB to the stuct for the products built with GO.
@@ -61,4 +63,49 @@ func (s *Store) ListProducts(ctx context.Context) ([]types.Product, error) {
 	}
 
 	return products, nil
+}
+
+// GetProductByID returns a single product by its ID.
+func (s *Store) GetProductByID(ctx context.Context, id int) (types.Product, error) {
+	query := `
+		SELECT
+			id,
+			name,
+			category,
+			price,
+			COALESCE(compare_at_price, 0) AS compare_at_price,
+			rating,
+			review_count,
+			skin_type,
+			COALESCE(badge, '') AS badge,
+			image_url,
+			description,
+			volume
+		FROM products
+		WHERE id = $1
+	`
+
+	var product types.Product
+	err := s.Pool.QueryRow(ctx, query, id).Scan(
+		&product.ID,
+		&product.Name,
+		&product.Category,
+		&product.Price,
+		&product.CompareAtPrice,
+		&product.Rating,
+		&product.ReviewCount,
+		&product.SkinType,
+		&product.Badge,
+		&product.ImageURL,
+		&product.Description,
+		&product.Volume,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return types.Product{}, pgx.ErrNoRows
+		}
+		return types.Product{}, err
+	}
+
+	return product, nil
 }
