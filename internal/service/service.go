@@ -13,8 +13,3 @@ type Service struct {
 func New(s *store.Store) *Service {
 	return &Service{store: s}
 }
-
-// NewService creates a service instance from a store dependency.
-func NewService(s *store.Store) *Service {
-	return New(s)
-}

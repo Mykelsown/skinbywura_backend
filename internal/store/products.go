@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// ListProducts returns every product in the database in a stable order. it essentaially connects the DB to the stuct for the products built with GO.
+// ListProducts returns every product in the database in a stable order.
 func (s *Store) ListProducts(ctx context.Context) ([]types.Product, error) {
 	query := `
 		SELECT
