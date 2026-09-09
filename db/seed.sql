@@ -1,0 +1,9 @@
+INSERT INTO products (name, category, price, compare_at_price, rating, review_count, skin_type, badge, image_url, description, volume) VALUES
+('Glow Ritual Cleanser', 'Cleanser', 6500, 8500, 4.8, 182, 'Sensitive', 'Bestseller', '/images/glow-ritual-cleanser.jpg', 'A low-pH cleansing wash that lifts sunscreen, sweat, and daily grime without stripping your skin barrier.', '200ml'),
+('Coco Dew Hydrating Toner', 'Toner', 7200, 9200, 4.7, 143, 'Dry', 'New', '/images/coco-dew-toner.jpg', 'A lightweight hydrating toner infused with glycerin and aloe for a cushiony, dewy finish.', '150ml'),
+('Nubian Serum Boost', 'Serum', 12500, 15000, 4.9, 264, 'Combination', 'Top Rated', '/images/nubian-serum-boost.jpg', 'A brightening niacinamide serum that helps refine pores, boost glow, and even skin tone.', '30ml'),
+('Lagos Repair Cream', 'Moisturiser', 14800, NULL, 4.8, 221, 'Dry', NULL, '/images/lagos-repair-cream.jpg', 'A rich ceramide moisturiser that restores moisture and comforts stressed, dehydrated skin.', '50ml'),
+('Sunshine Guard SPF 50', 'Sunscreen', 16000, 19000, 4.9, 301, 'All Skin Types', 'Editor''s Pick', '/images/sunshine-guard-spf50.jpg', 'Broad-spectrum daily sunscreen with a soft finish that layers perfectly under makeup.', '50ml'),
+('Cedar Glow Facial Oil', 'Oil', 9800, 11200, 4.6, 118, 'Dry', NULL, '/images/cedar-glow-facial-oil.jpg', 'A fast-absorbing facial oil made with baobab and rosemary to seal in hydration and add glow.', '30ml'),
+('Pure Clay Detox Mask', 'Mask', 11000, 13900, 4.7, 167, 'Oily', 'Limited', '/images/pure-clay-detox-mask.jpg', 'A purifying clay mask that unclogs pores, controls excess oil, and leaves skin fresh and smooth.', '100g'),
+('Honey Silk Body Butter', 'Body Care', 8700, NULL, 4.5, 94, 'Normal', NULL, '/images/honey-silk-body-butter.jpg', 'A rich body butter that nourishes dry skin, softens rough patches, and leaves a satin glow.', '250g');

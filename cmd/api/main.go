@@ -9,6 +9,7 @@ import (
 
 	"github.com/Mykelsown/skinbywura_backend.git/config"
 	"github.com/Mykelsown/skinbywura_backend.git/internal/server"
+	"github.com/Mykelsown/skinbywura_backend.git/internal/service"
 	"github.com/Mykelsown/skinbywura_backend.git/internal/store"
 	"github.com/joho/godotenv"
 )
@@ -37,8 +38,9 @@ func main() {
 	}
 	log.Println("database connection verified")
 
-	// Build the HTTP server and block while it handles incoming requests.
-	serve := server.New(cfg)
+	// Build the service and HTTP server, then block while they handle incoming requests.
+	productService := service.New(dbStore)
+	serve := server.New(cfg, productService)
 	log.Println("listening on port :" + cfg.Port)
 	err = serve.Run()
 	if err != nil {

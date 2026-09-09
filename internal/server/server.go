@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/Mykelsown/skinbywura_backend.git/config"
+	"github.com/Mykelsown/skinbywura_backend.git/internal/handler"
+	"github.com/Mykelsown/skinbywura_backend.git/internal/service"
 )
 
 // Server holds the HTTP listener address and the registered handlers.
@@ -14,11 +16,12 @@ type Server struct {
 }
 
 // New creates a server instance from the loaded environment configuration.
-func New(cfg config.EnvData) *Server {
-	// Register the application routes once when the server is created.
+func New(cfg config.EnvData, svc *service.Service) *Server {
+	productHandler := handler.NewProductHandler(svc)
+
 	ser := &Server{
 		address: cfg.Port,
-		route:   loadRoute(),
+		route:   loadRoute(productHandler),
 	}
 
 	return ser
