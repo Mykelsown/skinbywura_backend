@@ -6,6 +6,7 @@ import (
 
 	"github.com/Mykelsown/skinbywura_backend.git/config"
 	"github.com/Mykelsown/skinbywura_backend.git/internal/handler"
+	"github.com/Mykelsown/skinbywura_backend.git/internal/middleware"
 	"github.com/Mykelsown/skinbywura_backend.git/internal/service"
 )
 
@@ -21,7 +22,7 @@ func New(cfg config.EnvData, svc *service.Service) *Server {
 
 	ser := &Server{
 		address: cfg.Port,
-		route:   loadRoute(productHandler),
+		route:   middleware.CORS(loadRoute(productHandler)),
 	}
 
 	return ser
