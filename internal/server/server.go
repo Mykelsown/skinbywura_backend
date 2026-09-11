@@ -19,10 +19,11 @@ type Server struct {
 // New creates a server instance from the loaded environment configuration.
 func New(cfg config.EnvData, svc *service.Service) *Server {
 	productHandler := handler.NewProductHandler(svc)
+	authHandler := handler.NewAuthHandler(svc)
 
 	ser := &Server{
 		address: cfg.Port,
-		route:   middleware.CORS(loadRoute(productHandler)),
+		route:   middleware.CORS(loadRoute(svc, productHandler, authHandler)),
 	}
 
 	return ser
