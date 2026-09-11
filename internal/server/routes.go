@@ -10,7 +10,7 @@ import (
 )
 
 // loadRoute registers all API endpoints and returns the mux that serves them.
-func loadRoute(svc *service.Service, productHandler *handler.ProductHandler, authHandler *handler.AuthHandler, cartHandler *handler.CartHandler, wishlistHandler *handler.WishlistHandler) http.Handler {
+func loadRoute(svc *service.Service, productHandler *handler.ProductHandler, authHandler *handler.AuthHandler, cartHandler *handler.CartHandler, wishlistHandler *handler.WishlistHandler, orderHandler *handler.OrderHandler) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
@@ -28,6 +28,8 @@ func loadRoute(svc *service.Service, productHandler *handler.ProductHandler, aut
 	mux.Handle("PUT /api/cart", middleware.RequireAuth(svc)(http.HandlerFunc(cartHandler.ReplaceCart)))
 	mux.Handle("GET /api/wishlist", middleware.RequireAuth(svc)(http.HandlerFunc(wishlistHandler.GetWishlist)))
 	mux.Handle("PUT /api/wishlist", middleware.RequireAuth(svc)(http.HandlerFunc(wishlistHandler.ReplaceWishlist)))
+	mux.Handle("POST /api/orders", middleware.RequireAuth(svc)(http.HandlerFunc(orderHandler.Checkout)))
+	mux.Handle("GET /api/orders", middleware.RequireAuth(svc)(http.HandlerFunc(orderHandler.ListOrders)))
 
 	return mux
 }
