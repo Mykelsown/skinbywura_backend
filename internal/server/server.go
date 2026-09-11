@@ -20,10 +20,12 @@ type Server struct {
 func New(cfg config.EnvData, svc *service.Service) *Server {
 	productHandler := handler.NewProductHandler(svc)
 	authHandler := handler.NewAuthHandler(svc)
+	cartHandler := handler.NewCartHandler(svc)
+	wishlistHandler := handler.NewWishlistHandler(svc)
 
 	ser := &Server{
 		address: cfg.Port,
-		route:   middleware.CORS(loadRoute(svc, productHandler, authHandler)),
+		route:   middleware.CORS(loadRoute(svc, productHandler, authHandler, cartHandler, wishlistHandler)),
 	}
 
 	return ser
