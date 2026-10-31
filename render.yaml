@@ -1,0 +1,42 @@
+# Render Blueprint: creates the API service and its Postgres database in one step.
+# In Render: New > Blueprint > pick this repo. Then fill the values marked sync: false.
+databases:
+  - name: skinbywura-db
+    plan: basic-256mb
+    databaseName: skinbywura
+    user: skinbywura
+
+services:
+  - type: web
+    name: skinbywura-api
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: skinbywura-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      # Your Vercel storefront origin, e.g. https://skinbywura.vercel.app (no trailing slash).
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      # Must be an address on a domain verified in Resend, e.g. Skin By Wura <orders@yourdomain.com>
+      - key: MAIL_FROM
+        sync: false
+      # Inbox that receives contact messages and new-order alerts.
+      - key: STORE_EMAIL
+        sync: false
+      - key: STORE_NAME
+        value: Skin By Wura
+      # Shown in order emails, e.g. bank transfer details or "Pay on delivery".
+      - key: PAYMENT_NOTE
+        sync: false

@@ -1,0 +1,42 @@
+name: ci
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      - run: go test ./...
+      - name: Boot against a real database (migrations + health check)
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/test?sslmode=disable
+          APP_ENV: development
+          PORT: 8080
+        run: |
+          go run ./cmd/api &
+          for i in $(seq 1 30); do
+            if curl -fs http://127.0.0.1:8080/api/health; then echo; break; fi
+            sleep 1
+          done
+          curl -fs http://127.0.0.1:8080/api/health
+          curl -fs http://127.0.0.1:8080/api/products
+          kill %1
