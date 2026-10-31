@@ -15,7 +15,10 @@ import (
 )
 
 var (
-	ErrInvalidInput       = errors.New("name, email and password are required")
+	ErrInvalidInput       = errors.New("name, a valid email and a password of 8 to 72 characters are required")
+	ErrWeakPassword       = errors.New("password must be between 8 and 72 characters")
+	ErrWrongPassword      = errors.New("current password is incorrect")
+	ErrResetInvalid       = errors.New("this reset link is invalid or has expired")
 	ErrInvalidCredentials = errors.New("invalid email or password")
 	ErrEmailInUse         = errors.New("email already in use")
 	ErrUnauthorized       = errors.New("unauthorized")
@@ -25,12 +28,15 @@ const SessionCookieName = "session_token"
 
 const sessionTTL = 7 * 24 * time.Hour
 
+// SessionExpiry returns the expiry time for a session created now.
+func SessionExpiry() time.Time { return time.Now().Add(sessionTTL) }
+
 // Signup creates a user, hashes the password, and issues a session token.
 func (s *Service) Signup(ctx context.Context, req types.SignupRequest) (types.User, string, error) {
-	name := strings.TrimSpace(req.Name)
+	name := clean(req.Name, 80)
 	email := strings.TrimSpace(strings.ToLower(req.Email))
-	password := strings.TrimSpace(req.Password)
-	if name == "" || email == "" || password == "" {
+	password := req.Password
+	if name == "" || !validEmail(email) || !validPassword(password) {
 		return types.User{}, "", ErrInvalidInput
 	}
 
@@ -59,7 +65,7 @@ func (s *Service) Signup(ctx context.Context, req types.SignupRequest) (types.Us
 // Login validates credentials and issues a session token when they are valid.
 func (s *Service) Login(ctx context.Context, req types.LoginRequest) (types.User, string, error) {
 	email := strings.TrimSpace(strings.ToLower(req.Email))
-	password := strings.TrimSpace(req.Password)
+	password := req.Password
 	if email == "" || password == "" {
 		return types.User{}, "", ErrInvalidCredentials
 	}

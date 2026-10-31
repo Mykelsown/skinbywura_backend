@@ -1,49 +1,66 @@
 // Package main boots the API application.
-// It loads the environment configuration, creates the HTTP server,
-// and starts listening for incoming requests.
+// It loads configuration, migrates the database, and serves HTTP until told to stop.
 package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Mykelsown/skinbywura_backend.git/config"
+	"github.com/Mykelsown/skinbywura_backend.git/db"
+	"github.com/Mykelsown/skinbywura_backend.git/internal/mailer"
+	"github.com/Mykelsown/skinbywura_backend.git/internal/migrate"
 	"github.com/Mykelsown/skinbywura_backend.git/internal/server"
 	"github.com/Mykelsown/skinbywura_backend.git/internal/service"
 	"github.com/Mykelsown/skinbywura_backend.git/internal/store"
 	"github.com/joho/godotenv"
 )
 
-// main loads environment variables, initializes the server, and starts the app.
 func main() {
-	// Load local development settings before reading the application config.
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("failed to load .env file content: %v", err)
+	if err := run(); err != nil {
+		slog.Error("fatal", "err", err)
+		os.Exit(1)
 	}
+}
+
+func run() error {
+	// A .env file is a local-development convenience. On Render/Docker the real
+	// environment is already set, so a missing file is normal and not an error.
+	_ = godotenv.Load()
 
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
 
-	// Establish the database connection before starting the HTTP server.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// Connection retries briefly because managed databases can lag the app at first boot.
 	dbStore, err := store.Connection(cfg.DB)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		return err
 	}
-	// Keep the pool open for the lifetime of the application.
 	defer dbStore.Pool.Close()
+	slog.Info("database connection verified")
 
-	// Confirm that the database is reachable, not just that the pool was created.
-	if err := dbStore.Pool.Ping(context.Background()); err != nil {
-		log.Fatalf("database connection ping failed: %v", err)
+	if cfg.AutoMigrate {
+		if err := migrate.Up(ctx, dbStore.Pool, db.Migrations, "migrations"); err != nil {
+			return err
+		}
 	}
-	log.Println("database connection verified")
 
-	// Build the service and HTTP server, then block while they handle incoming requests.
-	productService := service.New(dbStore)
-	serve := server.New(cfg, productService)
-	log.Println("listening on port :" + cfg.Port)
-	err = serve.Run()
-	if err != nil {
-		log.Fatalf("failed to run server on port %s: %v", cfg.Port, err)
-	}
+	svc := service.New(dbStore, service.Options{
+		Mailer:      mailer.New(cfg.ResendAPIKey, cfg.MailFrom),
+		FrontendURL: cfg.FrontendURL,
+		StoreEmail:  cfg.StoreEmail,
+		StoreName:   cfg.StoreName,
+		PaymentNote: cfg.PaymentNote,
+	})
+	go svc.CleanupLoop(ctx)
+
+	return server.New(cfg, svc).Run(ctx)
 }

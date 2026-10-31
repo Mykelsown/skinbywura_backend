@@ -38,9 +38,15 @@ func (s *Store) GetWishlist(ctx context.Context, userID int64) ([]types.Wishlist
 	return items, nil
 }
 
-// ReplaceWishlist overwrites the user's wishlist with the provided items.
+// ReplaceWishlist overwrites the user's wishlist with the provided items, atomically.
 func (s *Store) ReplaceWishlist(ctx context.Context, userID int64, items []types.WishlistItem) ([]types.WishlistItem, error) {
-	if _, err := s.Pool.Exec(ctx, `DELETE FROM wishlist_items WHERE user_id = $1`, userID); err != nil {
+	tx, err := s.Pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `DELETE FROM wishlist_items WHERE user_id = $1`, userID); err != nil {
 		return nil, err
 	}
 
@@ -49,16 +55,20 @@ func (s *Store) ReplaceWishlist(ctx context.Context, userID int64, items []types
 		if productID == 0 {
 			productID = item.ID
 		}
-		if productID == 0 {
+		if productID <= 0 {
 			continue
 		}
-		if _, err := s.Pool.Exec(ctx, `
+		if _, err := tx.Exec(ctx, `
 			INSERT INTO wishlist_items (user_id, product_id)
-			VALUES ($1, $2)
+			SELECT $1, p.id FROM products p WHERE p.id = $2
 			ON CONFLICT (user_id, product_id) DO NOTHING
 		`, userID, productID); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
 	}
 
 	return s.GetWishlist(ctx, userID)

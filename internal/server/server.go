@@ -2,7 +2,11 @@
 package server
 
 import (
+	"context"
+	"errors"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/Mykelsown/skinbywura_backend.git/config"
 	"github.com/Mykelsown/skinbywura_backend.git/internal/handler"
@@ -10,31 +14,59 @@ import (
 	"github.com/Mykelsown/skinbywura_backend.git/internal/service"
 )
 
-// Server holds the HTTP listener address and the registered handlers.
+// Server wraps the configured http.Server.
 type Server struct {
-	address string       // address is the configured TCP port.
-	route   http.Handler // route handles incoming HTTP requests.
+	http *http.Server
 }
 
 // New creates a server instance from the loaded environment configuration.
 func New(cfg config.EnvData, svc *service.Service) *Server {
-	productHandler := handler.NewProductHandler(svc)
-	authHandler := handler.NewAuthHandler(svc)
-	cartHandler := handler.NewCartHandler(svc)
-	wishlistHandler := handler.NewWishlistHandler(svc)
-	orderHandler := handler.NewOrderHandler(svc)
+	cookie := handler.CookieSettings{Secure: cfg.CookieSecure, SameSite: handler.ParseSameSite(cfg.CookieSameSite)}
 
-	ser := &Server{
-		address: cfg.Port,
-		route:   middleware.CORS(loadRoute(svc, productHandler, authHandler, cartHandler, wishlistHandler, orderHandler)),
+	h := handlers{
+		product:  handler.NewProductHandler(svc),
+		auth:     handler.NewAuthHandler(svc, cookie),
+		cart:     handler.NewCartHandler(svc),
+		wishlist: handler.NewWishlistHandler(svc),
+		order:    handler.NewOrderHandler(svc),
+		contact:  handler.NewContactHandler(svc),
 	}
 
-	return ser
+	// Order matters: logging wraps everything so panics and CORS rejections are recorded.
+	var root http.Handler = loadRoute(svc, h)
+	root = middleware.CORS(cfg.AllowedOrigins)(root)
+	root = middleware.SecurityHeaders(root)
+	root = middleware.Logging(root)
+
+	return &Server{http: &http.Server{
+		Addr:              ":" + cfg.Port,
+		Handler:           root,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       90 * time.Second,
+		MaxHeaderBytes:    1 << 16,
+	}}
 }
 
-// Run starts the HTTP server on the configured port.
-func (s *Server) Run() error {
-	// ListenAndServe blocks until the server stops or encounters an error.
-	err := http.ListenAndServe(":"+s.address, s.route)
-	return err
+// Run serves until ctx is cancelled (SIGTERM from the platform), then drains in-flight requests.
+func (s *Server) Run(ctx context.Context) error {
+	errCh := make(chan error, 1)
+	go func() {
+		slog.Info("listening", "addr", s.http.Addr)
+		errCh <- s.http.ListenAndServe()
+	}()
+
+	select {
+	case err := <-errCh:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
+	case <-ctx.Done():
+		slog.Info("shutting down")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		return s.http.Shutdown(shutdownCtx)
+	}
 }

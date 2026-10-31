@@ -4,18 +4,30 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/Mykelsown/skinbywura_backend.git/internal/types"
 )
 
 var ErrCartEmpty = errors.New("cart is empty")
 
 // CreateOrder creates a single order from the authenticated user's cart.
-func (s *Store) CreateOrder(ctx context.Context, userID int64) (types.Order, error) {
+func (s *Store) CreateOrder(ctx context.Context, userID int64, ship types.CheckoutRequest) (types.Order, error) {
 	tx, err := s.Pool.Begin(ctx)
 	if err != nil {
 		return types.Order{}, err
 	}
 	defer tx.Rollback(ctx)
+
+	// Lock the cart row so two simultaneous checkouts (double click, two tabs)
+	// serialise: the second waits, then finds the cart already emptied.
+	var cartID int64
+	if err := tx.QueryRow(ctx, `SELECT id FROM carts WHERE user_id = $1 FOR UPDATE`, userID).Scan(&cartID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return types.Order{}, ErrCartEmpty
+		}
+		return types.Order{}, err
+	}
 
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, p.name, p.price, ci.qty
@@ -43,16 +55,17 @@ func (s *Store) CreateOrder(ctx context.Context, userID int64) (types.Order, err
 	if err := rows.Err(); err != nil {
 		return types.Order{}, err
 	}
+	rows.Close()
 	if len(cartItems) == 0 {
 		return types.Order{}, ErrCartEmpty
 	}
 
 	var orderID int64
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO orders (user_id, status, total)
-		VALUES ($1, 'pending', $2)
+		INSERT INTO orders (user_id, status, total, ship_name, ship_phone, ship_address, ship_city, ship_state, notes)
+		VALUES ($1, 'pending', $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id
-	`, userID, total).Scan(&orderID); err != nil {
+	`, userID, total, ship.Name, ship.Phone, ship.Address, ship.City, ship.State, ship.Notes).Scan(&orderID); err != nil {
 		return types.Order{}, err
 	}
 
@@ -65,10 +78,7 @@ func (s *Store) CreateOrder(ctx context.Context, userID int64) (types.Order, err
 		}
 	}
 
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM cart_items
-		WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1)
-	`, userID); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM cart_items WHERE cart_id = $1`, cartID); err != nil {
 		return types.Order{}, err
 	}
 
@@ -82,7 +92,7 @@ func (s *Store) CreateOrder(ctx context.Context, userID int64) (types.Order, err
 // ListOrdersByUser returns all orders for a user, newest first.
 func (s *Store) ListOrdersByUser(ctx context.Context, userID int64) ([]types.Order, error) {
 	rows, err := s.Pool.Query(ctx, `
-		SELECT id, status, total, created_at
+		SELECT id, status, total, created_at, ship_name, ship_phone, ship_address, ship_city, ship_state, notes
 		FROM orders
 		WHERE user_id = $1
 		ORDER BY created_at DESC, id DESC
@@ -95,7 +105,7 @@ func (s *Store) ListOrdersByUser(ctx context.Context, userID int64) ([]types.Ord
 	orders := make([]types.Order, 0)
 	for rows.Next() {
 		var order types.Order
-		if err := rows.Scan(&order.ID, &order.Status, &order.Total, &order.CreatedAt); err != nil {
+		if err := rows.Scan(&order.ID, &order.Status, &order.Total, &order.CreatedAt, &order.ShipName, &order.ShipPhone, &order.ShipAddress, &order.ShipCity, &order.ShipState, &order.Notes); err != nil {
 			return nil, err
 		}
 
@@ -117,10 +127,10 @@ func (s *Store) ListOrdersByUser(ctx context.Context, userID int64) ([]types.Ord
 func (s *Store) getOrderByID(ctx context.Context, orderID int64) (types.Order, error) {
 	var order types.Order
 	if err := s.Pool.QueryRow(ctx, `
-		SELECT id, status, total, created_at
+		SELECT id, status, total, created_at, ship_name, ship_phone, ship_address, ship_city, ship_state, notes
 		FROM orders
 		WHERE id = $1
-	`, orderID).Scan(&order.ID, &order.Status, &order.Total, &order.CreatedAt); err != nil {
+	`, orderID).Scan(&order.ID, &order.Status, &order.Total, &order.CreatedAt, &order.ShipName, &order.ShipPhone, &order.ShipAddress, &order.ShipCity, &order.ShipState, &order.Notes); err != nil {
 		return types.Order{}, err
 	}
 

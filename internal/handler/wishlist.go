@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/Mykelsown/skinbywura_backend.git/internal/service"
@@ -28,7 +27,7 @@ func (h *WishlistHandler) GetWishlist(w http.ResponseWriter, r *http.Request) {
 
 	items, err := h.service.GetWishlist(r.Context(), user.ID)
 	if err != nil {
-		WriteErrorJSON(w, http.StatusInternalServerError, "failed to load wishlist")
+		serverError(w, r, "failed to load wishlist", err)
 		return
 	}
 
@@ -44,14 +43,14 @@ func (h *WishlistHandler) ReplaceWishlist(w http.ResponseWriter, r *http.Request
 	}
 
 	var items []types.WishlistItem
-	if err := json.NewDecoder(r.Body).Decode(&items); err != nil {
+	if err := decodeJSON(w, r, &items); err != nil {
 		WriteErrorJSON(w, http.StatusBadRequest, "invalid wishlist payload")
 		return
 	}
 
 	updated, err := h.service.ReplaceWishlist(r.Context(), user.ID, items)
 	if err != nil {
-		WriteErrorJSON(w, http.StatusInternalServerError, "failed to save wishlist")
+		serverError(w, r, "failed to save wishlist", err)
 		return
 	}
 

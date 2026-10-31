@@ -57,18 +57,14 @@ func (s *Store) ReplaceCart(ctx context.Context, userID int64, items []types.Car
 		return nil, err
 	}
 
-	for _, item := range items {
-		productID := item.ProductID
-		if productID == 0 {
-			productID = item.ID
-		}
-		if productID == 0 || item.Qty <= 0 {
-			continue
-		}
+	// Merge duplicates and cap quantities first: the table has UNIQUE(cart_id, product_id),
+	// so inserting the same product twice would otherwise fail the whole save.
+	for _, line := range mergeCartItems(items) {
+		// INSERT ... SELECT skips product ids that no longer exist instead of failing on the foreign key.
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO cart_items (cart_id, product_id, qty)
-			VALUES ($1, $2, $3)
-		`, cartID, productID, item.Qty); err != nil {
+			SELECT $1, p.id, $3 FROM products p WHERE p.id = $2
+		`, cartID, line.productID, line.qty); err != nil {
 			return nil, err
 		}
 	}
@@ -97,4 +93,40 @@ func (s *Store) getOrCreateCartIDTx(ctx context.Context, tx pgx.Tx, userID int64
 		return 0, err
 	}
 	return cartID, nil
+}
+
+// MaxLineQty is the largest quantity of one product allowed in a cart.
+const MaxLineQty = 99
+
+type cartLine struct {
+	productID int64
+	qty       int
+}
+
+// mergeCartItems collapses duplicate products into one line, drops invalid lines,
+// caps quantities, and preserves first-seen order.
+func mergeCartItems(items []types.CartItem) []cartLine {
+	index := make(map[int64]int)
+	var out []cartLine
+	for _, item := range items {
+		productID := item.ProductID
+		if productID == 0 {
+			productID = item.ID
+		}
+		if productID <= 0 || item.Qty <= 0 {
+			continue
+		}
+		if i, ok := index[productID]; ok {
+			out[i].qty += item.Qty
+		} else {
+			index[productID] = len(out)
+			out = append(out, cartLine{productID: productID, qty: item.Qty})
+		}
+	}
+	for i := range out {
+		if out[i].qty > MaxLineQty {
+			out[i].qty = MaxLineQty
+		}
+	}
+	return out
 }

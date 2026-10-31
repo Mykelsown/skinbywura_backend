@@ -4,6 +4,7 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -21,11 +22,18 @@ func Connection(connectionString string) (*Store, error) {
 		return nil, err
 	}
 
-	// Release the pool if the initial connectivity check fails.
-	if err := pool.Ping(context.Background()); err != nil {
-		pool.Close()
-		return nil, err
+	// Retry the first ping: on a fresh deploy the database may still be starting.
+	var pingErr error
+	for attempt := 1; attempt <= 10; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		pingErr = pool.Ping(ctx)
+		cancel()
+		if pingErr == nil {
+			return &Store{Pool: pool}, nil
+		}
+		time.Sleep(time.Duration(attempt) * time.Second)
 	}
 
-	return &Store{Pool: pool}, nil
+	pool.Close()
+	return nil, pingErr
 }

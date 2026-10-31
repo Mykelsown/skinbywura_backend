@@ -23,7 +23,7 @@ func NewProductHandler(s *service.Service) *ProductHandler {
 func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	products, err := h.service.ListProducts(r.Context())
 	if err != nil {
-		WriteErrorJSON(w, http.StatusInternalServerError, "failed to list products")
+		serverError(w, r, "failed to list products", err)
 		return
 	}
 
@@ -46,7 +46,7 @@ func (h *ProductHandler) GetProductByID(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		WriteErrorJSON(w, http.StatusInternalServerError, "failed to fetch product")
+		serverError(w, r, "failed to fetch product", err)
 		return
 	}
 

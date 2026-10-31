@@ -30,3 +30,33 @@ type LoginRequest struct {
 type ContextKey string
 
 const UserContextKey ContextKey = "user"
+
+// UpdateProfileRequest changes the display name on an account.
+type UpdateProfileRequest struct {
+	Name string `json:"name"`
+}
+
+// ChangePasswordRequest changes the password for a signed-in user.
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+// ForgotPasswordRequest asks for a reset link to be emailed.
+type ForgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+// ResetPasswordRequest completes a reset using the emailed token.
+type ResetPasswordRequest struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"new_password"`
+}
+
+// ContactRequest is a message submitted from the public contact form.
+type ContactRequest struct {
+	Name    string `json:"name"`
+	Email   string `json:"email"`
+	Topic   string `json:"topic"`
+	Message string `json:"message"`
+}

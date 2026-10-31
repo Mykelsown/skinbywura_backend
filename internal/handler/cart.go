@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/Mykelsown/skinbywura_backend.git/internal/service"
@@ -28,7 +27,7 @@ func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) {
 
 	cart, err := h.service.GetCart(r.Context(), user.ID)
 	if err != nil {
-		WriteErrorJSON(w, http.StatusInternalServerError, "failed to load cart")
+		serverError(w, r, "failed to load cart", err)
 		return
 	}
 
@@ -44,14 +43,14 @@ func (h *CartHandler) ReplaceCart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var items []types.CartItem
-	if err := json.NewDecoder(r.Body).Decode(&items); err != nil {
+	if err := decodeJSON(w, r, &items); err != nil {
 		WriteErrorJSON(w, http.StatusBadRequest, "invalid cart payload")
 		return
 	}
 
 	updated, err := h.service.ReplaceCart(r.Context(), user.ID, items)
 	if err != nil {
-		WriteErrorJSON(w, http.StatusInternalServerError, "failed to save cart")
+		serverError(w, r, "failed to save cart", err)
 		return
 	}
 

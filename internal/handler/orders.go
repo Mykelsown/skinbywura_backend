@@ -26,13 +26,19 @@ func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	order, err := h.service.CreateOrder(r.Context(), user.ID)
+	var req types.CheckoutRequest
+	if err := decodeJSON(w, r, &req); err != nil {
+		WriteErrorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	order, err := h.service.CreateOrder(r.Context(), user, req)
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrCartEmpty):
+		case errors.Is(err, service.ErrCartEmpty), errors.Is(err, service.ErrInvalidShipping):
 			WriteErrorJSON(w, http.StatusBadRequest, err.Error())
 		default:
-			WriteErrorJSON(w, http.StatusInternalServerError, "failed to create order")
+			serverError(w, r, "failed to create order", err)
 		}
 		return
 	}
@@ -50,7 +56,7 @@ func (h *OrderHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 
 	orders, err := h.service.ListOrdersByUser(r.Context(), user.ID)
 	if err != nil {
-		WriteErrorJSON(w, http.StatusInternalServerError, "failed to load orders")
+		serverError(w, r, "failed to load orders", err)
 		return
 	}
 
