@@ -63,7 +63,7 @@ func (s *Store) ReplaceCart(ctx context.Context, userID int64, items []types.Car
 		// INSERT ... SELECT skips product ids that no longer exist instead of failing on the foreign key.
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO cart_items (cart_id, product_id, qty)
-			SELECT $1, p.id, $3 FROM products p WHERE p.id = $2
+			SELECT $1::bigint, p.id, $3::int FROM products p WHERE p.id = $2::bigint
 		`, cartID, line.productID, line.qty); err != nil {
 			return nil, err
 		}

@@ -60,7 +60,7 @@ func (s *Store) ReplaceWishlist(ctx context.Context, userID int64, items []types
 		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO wishlist_items (user_id, product_id)
-			SELECT $1, p.id FROM products p WHERE p.id = $2
+			SELECT $1::bigint, p.id FROM products p WHERE p.id = $2::bigint
 			ON CONFLICT (user_id, product_id) DO NOTHING
 		`, userID, productID); err != nil {
 			return nil, err
